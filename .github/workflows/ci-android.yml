@@ -1,71 +1,113 @@
-name: CI (Android)
+name: MAME4droid Production Build
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: # 允许手动运行
 
 jobs:
   build:
     runs-on: ubuntu-latest
+
     env:
-      NDK_VER: "28.0.13004108"
-      API_LEVEL: "33"
-      TARGET_ARCH: "aarch64-linux-android"
+      SDK_PATH: /usr/local/lib/android/sdk
+      NDK_PATH: ${{ github.workspace }}/android-ndk-r28c
+      SDL_INSTALL_ROOT: ${{ github.workspace }}/sdl
+      MAME4DROID_DIR: ${{ github.workspace }}/android-MAME4droid
+      JAVA_HOME: /usr/lib/jvm/temurin-17-jdk-amd64
+      GRADLE_HOME: ${{ github.workspace }}/gradle-9.2.1
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
+        with:
+          submodules: 'recursive'
 
-      - name: Install Host Build Tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y make python3
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
 
-      - name: Setup Android NDK
+      - name: Install Gradle 9.2.1 Manually
         run: |
-          sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;${{ env.NDK_VER }}"
-          ANDROID_NDK_HOME="${ANDROID_SDK_ROOT}/ndk/${{ env.NDK_VER }}"
-          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
-          echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+          wget -q https://services.gradle.org/distributions/gradle-9.2.1-bin.zip
+          unzip -q gradle-9.2.1-bin.zip
+          echo "${{ env.GRADLE_HOME }}/bin" >> $GITHUB_PATH
 
-      - name: Prepare SDL2 Libs
+      - name: Download and Setup NDK r28c
         run: |
-          # 确保权限
-          chmod -R 777 ${{ github.workspace }}/sdl/
-          # 检查文件是否存在，这一步很重要
-          ls -l ${{ github.workspace }}/sdl/lib/libSDL2.so
-          cat -v ${{ github.workspace }}/sdl/bin/sdl2-config | head -n 1
-      
-      - name: Build MAME
+          wget -q https://dl.google.com/android/repository/android-ndk-r28c-linux.zip
+          unzip -q android-ndk-r28c-linux.zip
+          chmod +x ${{ env.NDK_PATH }}/ndk-build
+          echo "${{ env.NDK_PATH }}" >> $GITHUB_PATH
+
+      - name: 1. Build MAME Core (.so)
         run: |
-          ABS_SDL_PATH="${{ github.workspace }}/sdl"
-          TOOLCHAIN_BIN="${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          # 确保 SDL 目录权限
+          chmod -R 777 ${{ env.SDL_INSTALL_ROOT }}
           
-          # 回归最初的逻辑，但通过 LDFLAGS 引导 SDL 路径
-          make -j$(nproc) android-arm64 REGENIE=1 VERBOSE=1 \
-            ANDROID_NDK_HOME="${{ env.ANDROID_NDK_HOME }}" \
-            SDL_INSTALL_ROOT="$ABS_SDL_PATH" \
-            STRIP="$TOOLCHAIN_BIN/llvm-strip" \
-            ARCHOPTS="-DANDROID_STL=c++_static" \
-            LDOPTS="-static-libstdc++ -L${SDL_INSTALL_ROOT}/lib -l:libSDL2.a -Wl,--strip-all"
+          # 核心编译指令
+          # 1. STRIP_SYMBOLS=0 禁用 MAME 内部那个会报错的 strip 逻辑
+          # 2. LDOPTS 加入 -Wl,--strip-all 在链接时直接完成去符号
+          make -j$(nproc) android-arm64 \
+            REGENIE=1 \
+            VERBOSE=1 \
+            STRIP_SYMBOLS=0 \
+            ANDROID_NDK_HOME="${{ env.NDK_PATH }}" \
+            SDL_INSTALL_ROOT="${{ env.SDL_INSTALL_ROOT }}" \
+            ARCHOPTS="-fuse-ld=lld -DANDROID_STL=c++_static" \
+            LDOPTS="-static-libstdc++ -L${{ env.SDL_INSTALL_ROOT }}/lib -l:libSDL2.a -Wl,--strip-all"
 
-      - name: Upload SO Library
+      - name: 2. Move Core to jniLibs
+        run: |
+          TARGET_LIB_DIR=${{ env.MAME4DROID_DIR }}/app/src/main/jniLibs/arm64-v8a
+          mkdir -p $TARGET_LIB_DIR
+          
+          echo "正在深度查找编译产出的 libmain.so..."
+          
+          # MAME 产物通常在 build/projects/sdl/mame/gmake-android-arm64/bin/...
+          # 不再限制 maxdepth，确保能找到
+          CORE_SO=$(find . -name "libmain.so" -not -path "*/.*" | head -n 1)
+          
+          if [ -z "$CORE_SO" ]; then
+            echo "警告: 未找到 libmain.so，尝试查找任何体积大于 10MB 的 .so 文件..."
+            CORE_SO=$(find . -name "*.so" -size +10M -not -path "*/.*" | head -n 1)
+          fi
+
+          if [ -n "$CORE_SO" ]; then
+            echo "成功找到核心库: $CORE_SO"
+            cp -v "$CORE_SO" "$TARGET_LIB_DIR/libMAME4droid.so"
+            
+            # 验证结果
+            echo "文件信息:"
+            file "$TARGET_LIB_DIR/libMAME4droid.so"
+          else
+            echo "错误: 未能找到任何有效的 .so 产物！"
+            exit 1
+          fi
+
+      - name: 3. Build JNI Glue (ndk-build)
+        run: |
+          cd ${{ env.MAME4DROID_DIR }}/app/src/main
+          ndk-build \
+            NDK_PROJECT_PATH=. \
+            APP_BUILD_SCRIPT=jni/Android.mk \
+            NDK_OUT=./obj \
+            NDK_LIBS_OUT=./jniLibs \
+            APP_ABI=arm64-v8a \
+            -j$(nproc)
+
+      - name: 4. Build APK (Gradle)
+        run: |
+          cd ${{ env.MAME4DROID_DIR }}
+          gradle wrapper --gradle-version 9.2.1 --distribution-type bin
+          chmod +x gradlew
+          ./gradlew clean assembleRelease \
+            -Pandroid.sdk.dir="${{ env.SDK_PATH }}" \
+            -Pandroid.ndkPath="${{ env.NDK_PATH }}"
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: mame-android-lib
-          # 建议使用通配符确保能搜到，以防相对路径层级有偏离
-          path: "**/libmain.so"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+          name: MAME4droid-Release-Package
+          path: |
+            ${{ env.MAME4DROID_DIR }}/app/build/outputs/apk/release/*.apk
