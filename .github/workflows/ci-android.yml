@@ -54,8 +54,8 @@ jobs:
             STRIP_SYMBOLS=0 \
             ANDROID_NDK_HOME="${{ env.NDK_PATH }}" \
             SDL_INSTALL_ROOT="${{ env.SDL_INSTALL_ROOT }}" \
-            ARCHOPTS="-fuse-ld=lld -DANDROID_STL=c++_static" \
-            LDOPTS="-static-libstdc++ -L${{ env.SDL_INSTALL_ROOT }}/lib -l:libSDL2.a -Wl,--strip-all"
+            ARCHOPTS="-DANDROID_STL=c++_static" \
+            LDOPTS="-fuse-ld=lld -static-libstdc++ -L${{ env.SDL_INSTALL_ROOT }}/lib -l:libSDL2.a -Wl,--strip-all"
 
       - name: 2. Move Core to jniLibs
         run: |
