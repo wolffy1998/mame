@@ -1,18 +1,7 @@
 name: XML/JSON validation
 
 on:
-  push:
-    paths:
-    - '.github/workflows/**'
-    - 'ctrlr/*'
-    - 'hash/*'
-    - 'plugins/**'
-  pull_request:
-    paths:
-    - '.github/workflows/**'
-    - 'ctrlr/*'
-    - 'hash/*'
-    - 'plugins/**'
+  workflow_dispatch: # 允许手动运行
 
 permissions:
   contents: read

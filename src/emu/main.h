@@ -42,9 +42,13 @@ constexpr int EMU_ERR_IDENT_NONE       = 9;    // identified no files
 class emulator_info
 {
 public:
+
+
 	// construction/destruction
 	emulator_info() = default;
 
+	static const char *myosd_droid_version;
+	
 	static const char *get_appname();
 	static const char *get_appname_lower();
 	static const char *get_configname();

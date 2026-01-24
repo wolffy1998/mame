@@ -1015,7 +1015,7 @@ void menu_select_game::show_config_menu(int index)
 
 void menu_select_game::make_topbox_text(std::string &line0, std::string &line1, std::string &line2) const
 {
-	line0 = string_format(_("%1$s %2$s ( %3$d / %4$d systems (%5$d BIOS) )"),
+	line0 = string_format(_("%1$s %2$s B站 红白机时空舱 编译 ( %3$d / %4$d systems)"),
 			emulator_info::get_appname(),
 			bare_build_version,
 			m_available_items,

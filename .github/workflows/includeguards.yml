@@ -1,16 +1,7 @@
 name: 'Check #include guards'
 
 on:
-  push:
-    paths:
-    - '.github/workflows/**'
-    - 'src/devices/**.h'
-    - 'src/mame/**.h'
-  pull_request:
-    paths:
-    - '.github/workflows/**'
-    - 'src/devices/**.h'
-    - 'src/mame/**.h'
+  workflow_dispatch: # 允许手动运行
 
 permissions:
   contents: read

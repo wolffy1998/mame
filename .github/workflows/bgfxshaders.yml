@@ -1,14 +1,7 @@
 name: Rebuild BGFX shaders
 
 on:
-  push:
-    paths:
-    - '.github/workflows/**'
-    - 'src/osd/modules/render/bgfx/shaders/**'
-  pull_request:
-    paths:
-    - '.github/workflows/**'
-    - 'src/osd/modules/render/bgfx/shaders/**'
+  workflow_dispatch: # 允许手动运行
 
 permissions:
   contents: read

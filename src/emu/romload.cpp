@@ -26,6 +26,11 @@
 #include <cstdarg>
 #include <set>
 
+// ips
+#include "ips.h"
+#include <fstream>
+#include <string>
+
 
 #define LOG_LOAD 0
 #define LOG(...) do { if (LOG_LOAD) debugload(__VA_ARGS__); } while(0)
@@ -744,6 +749,15 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(
 	// it also automatically attempts any kind of load by checksum supported by the archives.
 	std::unique_ptr<emu_file> result(
 			open_rom_file(searchpath, tried_file_names, has_crc, crc, ROM_GETNAME(romp), filerr));
+			
+	// 第2步：寻找rom对应的ips内存指针
+	m_ips_patch = ips::assign_patch(ROM_GETNAME(romp));
+	osd_printf_info("IPS: assign_patch('%s') returned %s\n", ROM_GETNAME(romp), m_ips_patch ? "PATCH FOUND" : "nullptr");
+	if (m_ips_patch)
+	{
+		osd_printf_info("IPS: ROM '%s' has IPS patch assigned\n",ROM_GETNAME(romp));
+	}
+	// --- 插入结束 ---
 
 	// update counters
 	m_romsloaded++;
@@ -755,6 +769,7 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(
 	else
 		return result;
 }
+
 
 
 std::unique_ptr<emu_file> rom_load_manager::open_rom_file(
@@ -791,13 +806,23 @@ std::unique_ptr<emu_file> rom_load_manager::open_rom_file(
 
 int rom_load_manager::rom_fread(emu_file *file, u8 *buffer, int length, const rom_entry *parent_region)
 {
-	if (file) // files just pass through
-		return file->read(buffer, length);
+	
+	// 第3步：实时打补丁
+	int bytes_read = length;
 
-	if (!ROMREGION_ISERASE(parent_region)) // otherwise, fill with randomness unless it was already specifically erased
+	if (file) // files just pass through
+		bytes_read = file->read(buffer, length);
+	else if (!ROMREGION_ISERASE(parent_region)) // otherwise, fill with randomness unless it was already specifically erased
 		fill_random(buffer, length);
 
-	return length;
+	if (m_ips_patch)
+	{
+		ips::apply_patch(m_ips_patch, buffer, bytes_read);
+	}
+
+	return bytes_read;
+	
+	// 结束插入
 }
 
 
@@ -1570,7 +1595,11 @@ rom_load_manager::rom_load_manager(running_machine &machine)
 	, m_chd_list()
 	, m_errorstring()
 	, m_softwarningstring()
+	// 第1步开始 初始化成员变量
+	, m_ips_patch(nullptr)
+	
 {
+	
 	// figure out which BIOS we are using
 	std::map<std::string_view, std::string> card_bios;
 	for (device_t &device : device_enumerator(machine.config().root_device()))
@@ -1606,6 +1635,49 @@ rom_load_manager::rom_load_manager(running_machine &machine)
 
 	// count the total number of ROMs
 	count_roms();
+	
+	// 第1步 核心逻辑 读取JSON 数组中的dat名称
+	// 获取 JSON 路径
+	// 1. 获取 JSON 路径
+	std::string gamename = machine.system().name;
+	std::string json_path = std::string("ipspatch").append(PATH_SEPARATOR).append(gamename).append(".json");
+
+	// 2. 暴力读取文件内容
+	std::ifstream f(json_path);
+	if (f.is_open())
+	{
+		std::string content((std::istreambuf_iterator<char>(f)), std::istreambuf_iterator<char>());
+		f.close();
+
+		// 3. 提取 [] 内部的补丁列表并清理格式
+		size_t start = content.find('[');
+		size_t end = content.find_last_of(']');
+		
+		if (start != std::string::npos && end != std::string::npos && end > start)
+		{
+			std::string raw_list = content.substr(start + 1, end - start - 1);
+			std::string clean_list = "";
+			
+			// 只保留：字母、数字、逗号、中划线、下划线、点
+			// 从而自动去掉了双引号、空格、换行符
+			for (char c : raw_list)
+			{
+				if (isalnum((unsigned char)c) || c == ',' || c == '-' || c == '_' || c == '.')
+				{
+					clean_list += c;
+				}
+			}
+
+			if (!clean_list.empty())
+			{
+				// 4. 发送给原版的 open_entry 处理
+				ips::open_entry(machine, clean_list.c_str(), this, machine.system().rom);
+				osd_printf_info("IPS:Load patch sequence from JSON: %s\n", clean_list.c_str());
+			}
+		}
+	}
+    // --- 修改结束 ---
+	
 
 	// reset the disk list
 	m_chd_list.clear();
@@ -1615,6 +1687,9 @@ rom_load_manager::rom_load_manager(running_machine &machine)
 
 	// display the results and exit
 	display_rom_load_results(false);
+	
+	ips::close_entry(this);
+	
 }
 
 

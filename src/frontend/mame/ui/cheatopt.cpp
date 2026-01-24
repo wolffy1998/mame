@@ -119,7 +119,7 @@ bool menu_cheat::handle(event const *ev)
 
 menu_cheat::menu_cheat(mame_ui_manager &mui, render_container &container) : menu(mui, container)
 {
-	set_heading(_("Cheat Options"));
+	set_heading(_("作弊选项"));
 	set_process_flags(PROCESS_LR_REPEAT);
 }
 

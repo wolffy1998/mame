@@ -198,6 +198,8 @@ files {
 	MAME_DIR .. "src/emu/resampler.h",
 	MAME_DIR .. "src/emu/romload.cpp",
 	MAME_DIR .. "src/emu/romload.h",
+	MAME_DIR .. "src/emu/ips.cpp",
+	MAME_DIR .. "src/emu/ips.h",
 	MAME_DIR .. "src/emu/romentry.h",
 	MAME_DIR .. "src/emu/romentry.cpp",
 	MAME_DIR .. "src/emu/save.cpp",

@@ -100,7 +100,7 @@ constexpr char const *MACHINE_FILTER_NAMES[machine_filter::COUNT] = {
 		N_p("machine-filter", "Clones"),
 		N_p("machine-filter", "Manufacturer"),
 		N_p("machine-filter", "Year"),
-		N_p("machine-filter", "Source File"),
+		N_p("machine-filter", "驱动文件"),
 		N_p("machine-filter", "Save Supported"),
 		N_p("machine-filter", "Save Unsupported"),
 		N_p("machine-filter", "CHD Required"),

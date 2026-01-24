@@ -163,9 +163,9 @@ void menu_main::populate()
 
 	if (!machine().sound().no_sound() && sound_interface_enumerator(machine().root_device()).first() != nullptr)
 	{
-		item_append(_("menu-main", "Audio Mixer"), 0, (void *)AUDIO_MIXER);
+		item_append(_("menu-main", "音频混合器"), 0, (void *)AUDIO_MIXER);
 
-		item_append(_("menu-main", "Audio Effects"), 0, (void *)AUDIO_EFFECTS);
+		item_append(_("menu-main", "音频效果"), 0, (void *)AUDIO_EFFECTS);
 	}
 
 	// FIXME: should also check for OSD sliders (same for tilde menu)
@@ -178,7 +178,7 @@ void menu_main::populate()
 		item_append(_("menu-main", "Crosshair Options"), 0, (void *)CROSSHAIR);
 
 	if (machine().options().cheat())
-		item_append(_("menu-main", "Cheat Options"), 0, (void *)CHEAT);
+		item_append(_("menu-main", "作弊选项"), 0, (void *)CHEAT);
 
 	if (machine_phase::RESET <= m_phase)
 	{

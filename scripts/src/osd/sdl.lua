@@ -325,7 +325,10 @@ project ("osd_" .. _OPTIONS["osd"])
 		MAME_DIR .. "src/osd/modules/file",
 		MAME_DIR .. "src/osd/modules/render",
 		MAME_DIR .. "3rdparty",
+		MAME_DIR .. "src/osd/myosd",
 		MAME_DIR .. "src/osd/sdl",
+		MAME_DIR .. "src/frontend/mame",
+		MAME_DIR .. "src/frontend/mame/ui",
 	}
 
 	if _OPTIONS["targetos"]=="macosx" then
@@ -373,20 +376,34 @@ project ("osd_" .. _OPTIONS["osd"])
 		}
 	end
 
-	files {
-		MAME_DIR .. "src/osd/osdepend.h",
-		MAME_DIR .. "src/osd/modules/osdwindow.cpp",
-		MAME_DIR .. "src/osd/modules/osdwindow.h",
-		MAME_DIR .. "src/osd/sdl/osdsdl.cpp",
-		MAME_DIR .. "src/osd/sdl/osdsdl.h",
-		MAME_DIR .. "src/osd/sdl/sdlmain.cpp",
-		MAME_DIR .. "src/osd/sdl/sdlopts.cpp",
-		MAME_DIR .. "src/osd/sdl/sdlopts.h",
-		MAME_DIR .. "src/osd/sdl/sdlprefix.h",
-		MAME_DIR .. "src/osd/sdl/video.cpp",
-		MAME_DIR .. "src/osd/sdl/window.cpp",
-		MAME_DIR .. "src/osd/sdl/window.h",
-	}
+	if _OPTIONS["targetos"]=="android" then
+		files {
+			MAME_DIR .. "src/osd/osdepend.h",
+			MAME_DIR .. "src/osd/modules/osdwindow.cpp",
+			MAME_DIR .. "src/osd/modules/osdwindow.h",
+			MAME_DIR .. "src/osd/myosd/input.cpp", 
+			MAME_DIR .. "src/osd/myosd/myosdmain.cpp",     -- 替代了 sdlmain.cpp
+			MAME_DIR .. "src/osd/myosd/myosd-droid.cpp",   -- 输入与 JNI 处理
+			MAME_DIR .. "src/osd/myosd/video.cpp",         -- 软件渲染器接口
+			MAME_DIR .. "src/osd/myosd/sound.cpp",         -- 音频流管理接口
+			MAME_DIR .. "src/osd/myosd/opensl_snd.cpp",    -- OpenSL ES 驱动实现
+		}
+	else 
+		files {
+			MAME_DIR .. "src/osd/osdepend.h",
+			MAME_DIR .. "src/osd/modules/osdwindow.cpp",
+			MAME_DIR .. "src/osd/modules/osdwindow.h",
+			MAME_DIR .. "src/osd/sdl/osdsdl.cpp",
+			MAME_DIR .. "src/osd/sdl/osdsdl.h",
+			MAME_DIR .. "src/osd/sdl/sdlmain.cpp",
+			MAME_DIR .. "src/osd/sdl/sdlopts.cpp",
+			MAME_DIR .. "src/osd/sdl/sdlopts.h",
+			MAME_DIR .. "src/osd/sdl/sdlprefix.h",
+			MAME_DIR .. "src/osd/sdl/video.cpp",
+			MAME_DIR .. "src/osd/sdl/window.cpp",
+			MAME_DIR .. "src/osd/sdl/window.h",
+		}
+	end 
 
 project ("ocore_" .. _OPTIONS["osd"])
 	targetsubdir(_OPTIONS["target"] .."_" .. _OPTIONS["subtarget"])
@@ -404,24 +421,51 @@ project ("ocore_" .. _OPTIONS["osd"])
 		MAME_DIR .. "src/osd",
 		MAME_DIR .. "src/lib",
 		MAME_DIR .. "src/lib/util",
+		MAME_DIR .. "src/osd/myosd",
+		MAME_DIR .. "src/osd/myosd/file",
 		MAME_DIR .. "src/osd/sdl",
 	}
 
-	files {
-		MAME_DIR .. "src/osd/osdcore.cpp",
-		MAME_DIR .. "src/osd/osdcore.h",
-		MAME_DIR .. "src/osd/osdfile.h",
-		MAME_DIR .. "src/osd/strconv.cpp",
-		MAME_DIR .. "src/osd/strconv.h",
-		MAME_DIR .. "src/osd/osdsync.cpp",
-		MAME_DIR .. "src/osd/osdsync.h",
-		MAME_DIR .. "src/osd/modules/osdmodule.cpp",
-		MAME_DIR .. "src/osd/modules/osdmodule.h",
-		MAME_DIR .. "src/osd/modules/lib/osdlib_" .. SDLOS_TARGETOS .. ".cpp",
-		MAME_DIR .. "src/osd/modules/lib/osdlib.h",
-	}
 
-	if BASE_TARGETOS=="unix" then
+	if _OPTIONS["targetos"]=="android" then
+		files {
+			MAME_DIR .. "src/osd/osdcore.cpp",
+			MAME_DIR .. "src/osd/osdcore.h",
+			MAME_DIR .. "src/osd/osdfile.h",
+			MAME_DIR .. "src/osd/strconv.cpp",
+			MAME_DIR .. "src/osd/strconv.h",
+			MAME_DIR .. "src/osd/osdsync.cpp",
+			MAME_DIR .. "src/osd/osdsync.h",
+			MAME_DIR .. "src/osd/modules/osdmodule.cpp",
+			MAME_DIR .. "src/osd/modules/osdmodule.h",
+			MAME_DIR .. "src/osd/modules/lib/osdlib.h",
+		}
+	else 
+		files {
+			MAME_DIR .. "src/osd/osdcore.cpp",
+			MAME_DIR .. "src/osd/osdcore.h",
+			MAME_DIR .. "src/osd/osdfile.h",
+			MAME_DIR .. "src/osd/strconv.cpp",
+			MAME_DIR .. "src/osd/strconv.h",
+			MAME_DIR .. "src/osd/osdsync.cpp",
+			MAME_DIR .. "src/osd/osdsync.h",
+			MAME_DIR .. "src/osd/modules/osdmodule.cpp",
+			MAME_DIR .. "src/osd/modules/osdmodule.h",
+			MAME_DIR .. "src/osd/modules/lib/osdlib_" .. SDLOS_TARGETOS .. ".cpp",
+			MAME_DIR .. "src/osd/modules/lib/osdlib.h",
+		}
+	end
+
+	if _OPTIONS["targetos"]=="android" then
+		files {
+			MAME_DIR .. "src/osd/myosd/osdlib.cpp", 
+			MAME_DIR .. "src/osd/myosd/file/posixdir.cpp",
+			MAME_DIR .. "src/osd/myosd/file/posixfile.cpp",
+			MAME_DIR .. "src/osd/myosd/file/posixfile.h",
+			MAME_DIR .. "src/osd/myosd/file/posixptty.cpp",
+			MAME_DIR .. "src/osd/myosd/file/posixsocket.cpp",
+		}
+	elseif BASE_TARGETOS=="unix" then
 		files {
 			MAME_DIR .. "src/osd/modules/file/posixdir.cpp",
 			MAME_DIR .. "src/osd/modules/file/posixfile.cpp",
