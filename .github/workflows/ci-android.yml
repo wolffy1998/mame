@@ -41,12 +41,12 @@ jobs:
           TOOLCHAIN_BIN="${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
           
           # 回归最初的逻辑，但通过 LDFLAGS 引导 SDL 路径
-          make -j$(nproc) android-arm64 REGENIE=1 VERBOSE=1 STRIP_SYMBOLS=1 \
+          make -j$(nproc) android-arm64 REGENIE=1 VERBOSE=1 \
             ANDROID_NDK_HOME="${{ env.ANDROID_NDK_HOME }}" \
             SDL_INSTALL_ROOT="$ABS_SDL_PATH" \
             STRIP="$TOOLCHAIN_BIN/llvm-strip" \
             ARCHOPTS="-DANDROID_STL=c++_static" \
-            LDOPTS="-static-libstdc++ -L${SDL_INSTALL_ROOT}/lib -l:libSDL2.a"
+            LDOPTS="-static-libstdc++ -L${SDL_INSTALL_ROOT}/lib -l:libSDL2.a -Wl,--strip-all"
 
       - name: Upload SO Library
         uses: actions/upload-artifact@v4
