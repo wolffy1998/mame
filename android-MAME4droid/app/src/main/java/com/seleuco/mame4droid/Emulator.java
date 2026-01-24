@@ -68,6 +68,7 @@ import com.seleuco.mame4droid.input.TouchController;
 import com.seleuco.mame4droid.render.IGLRenderer;
 import com.seleuco.mame4droid.views.EmulatorViewGL;
 import com.seleuco.mame4droid.widgets.WarnWidget;
+import android.view.KeyEvent;
 
 import java.io.File;
 import java.nio.ByteBuffer;
