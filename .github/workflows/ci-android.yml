@@ -1,0 +1,71 @@
+name: CI (Android)
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      NDK_VER: "28.0.13004108"
+      API_LEVEL: "33"
+      TARGET_ARCH: "aarch64-linux-android"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Host Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y make python3
+
+      - name: Setup Android NDK
+        run: |
+          sudo ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;${{ env.NDK_VER }}"
+          ANDROID_NDK_HOME="${ANDROID_SDK_ROOT}/ndk/${{ env.NDK_VER }}"
+          echo "ANDROID_NDK_HOME=$ANDROID_NDK_HOME" >> $GITHUB_ENV
+          echo "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin" >> $GITHUB_PATH
+
+      - name: Prepare SDL2 Libs
+        run: |
+          # 确保权限
+          chmod -R 777 ${{ github.workspace }}/sdl/
+          # 检查文件是否存在，这一步很重要
+          ls -l ${{ github.workspace }}/sdl/lib/libSDL2.so
+          cat -v ${{ github.workspace }}/sdl/bin/sdl2-config | head -n 1
+      
+      - name: Build MAME
+        run: |
+          ABS_SDL_PATH="${{ github.workspace }}/sdl"
+          TOOLCHAIN_BIN="${{ env.ANDROID_NDK_HOME }}/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          
+          # 回归最初的逻辑，但通过 LDFLAGS 引导 SDL 路径
+          make -j$(nproc) android-arm64 REGENIE=1 VERBOSE=1 STRIP_SYMBOLS=1 \
+            ANDROID_NDK_HOME="${{ env.ANDROID_NDK_HOME }}" \
+            SDL_INSTALL_ROOT="$ABS_SDL_PATH" \
+            STRIP="$TOOLCHAIN_BIN/llvm-strip" \
+            ARCHOPTS="-DANDROID_STL=c++_static" \
+            LDOPTS="-static-libstdc++ -L${SDL_INSTALL_ROOT}/lib -l:libSDL2.a"
+
+      - name: Upload SO Library
+        uses: actions/upload-artifact@v4
+        with:
+          name: mame-android-lib
+          # 建议使用通配符确保能搜到，以防相对路径层级有偏离
+          path: "**/libmain.so"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
