@@ -15,7 +15,7 @@
 #include "http.h"
 
 // 初始化 java UI层版本号 
-char *emulator_info::myosd_droid_version = nullptr; 
+const char *emulator_info::myosd_droid_version = nullptr; 
 
 
 machine_manager::machine_manager(emu_options& options, osd_interface& osd) :
