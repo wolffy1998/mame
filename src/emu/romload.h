@@ -504,6 +504,7 @@ private:
 
 	std::string         m_errorstring;        // error string
 	std::string         m_softwarningstring;  // software warning string
+	void                *m_ips_patch;         // IPS patch entry
 };
 
 
